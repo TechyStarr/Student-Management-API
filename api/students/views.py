@@ -3,7 +3,7 @@ from flask import request
 from flask_restx import Resource, fields, Namespace
 from ..auth.views import generate_random_string, generate_password
 from ..models.user import Student, User, Tutor
-from ..models.courses import Course
+from ..models.courses import Course, StudentCourse
 from ..auth.views import generate_random_string, generate_password, login_model
 from werkzeug.security import generate_password_hash, check_password_hash
 from http import HTTPStatus
@@ -21,8 +21,7 @@ course_model = course_namespace.model(
         'first_name': fields.String(required=True, description="Student's First Name"),
         'last_name': fields.String(required=True, description="'Student's Last Name"),
 		'student_id': fields.String(required=True, description="Studend ID"),
-		'password': fields.String(required=True, default="Student101", description="Student's Password"),
-		'gpa': fields.String(required=True, description='Student gpa')
+		'password': fields.String(required=True, default="Student101", description="Student's Password")
         
 	}
 )
@@ -36,6 +35,9 @@ student_course_model = course_namespace.model(
         'grade': fields.String(required=True, description="Studend ID")
     }
 )
+
+
+# student_course_code
 
 
 
@@ -64,13 +66,38 @@ class ResetPassword(Resource):
         pass
 
 
-@course_namespace.route('/students')
+@course_namespace.route('student/<int:student_id>/courses')
+class GetStudentCourses(Resource):
+    @course_namespace.marshal_with(course_model)
+    @course_namespace.doc(
+        description='Get all scores for all courses a student registered for', params={
+            'student_id': 'The student id'
+        }
+    )
+    @jwt_required()
+    def get(self, student_id):
+        """
+            Get all scores for a student
+        """
+        student = Student.get_by_id(student_id)
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            return student.registered_courses, HTTPStatus.OK
+
+
+
+
+@course_namespace.route('/students/<int:student_id>/courses')
 class GetStudents(Resource):
     
     @course_namespace.marshal_with(student_course_model, as_list=True)
     @course_namespace.doc(
         description='Get all courses registered to a student',
     )
+    @jwt_required()
     def get(self, student_id):
         """
             Retrieve all courses registered to a student
@@ -80,19 +107,39 @@ class GetStudents(Resource):
 
         student = get_jwt_identity()
         if student:
-            courses = Course.query.all()
+            courses = StudentCourse.query.all()
             return courses, HTTPStatus.OK
         return {
             'message': 'No students found'
         }
 
 
-    
+
+@course_namespace.route('/student')
+class RetrieveStudentCourses(Resource):
+    @course_namespace.marshal_with(course_model)
+    @course_namespace.doc(
+        description='Get all scores for all courses a student registered for', params={
+            'student_id': 'The student id'
+        }
+    )
+    @jwt_required()
+    def get(self):
+        """
+            Get all scores for a 
+        """
+        student = Student.get_by_id(get_jwt_identity())
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            return student.registered_courses, HTTPStatus.OK
 
 
     
 
-@course_namespace.route('/student/<int:student_id>/courses/<int:course_id>')
+@course_namespace.route('/student/<int:student_id>')
 class CalculateGPA(Resource):
     
     @course_namespace.marshal_with(course_model)

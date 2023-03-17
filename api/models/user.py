@@ -58,12 +58,14 @@ class Student(db.Model):
     # enrollment_status = db.Column(db.Enum(EnrollmentStatus), default=EnrollmentStatus.WAIT_LISTED)
     student_id = db.Column(db.String(20), unique=True)
     gpa = db.Column(db.String(), default=0.0)
-    registered_courses = db.relationship('Course', secondary='student_courses', backref='students', lazy=True)
-    score = db.relationship('Score', backref='student_score', lazy=True)
+    registered_courses = db.relationship('Course', secondary='student_courses', lazy=True)
 
 
     def __repr__(self):
         return f"<Student {self.username}>"
+    
+
+    
     
     def save(self):
         db.session.add(self)

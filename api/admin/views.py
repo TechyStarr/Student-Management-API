@@ -2,21 +2,44 @@ import uuid
 import random
 import string
 from ..utils import db
+from functools import wraps
 from flask import request
 from flask_restx import Resource, fields, Namespace
 from ..auth.views import generate_random_string, generate_password
 from ..models.user import Student, User, Tutor
-from ..models.courses import Course, StudentCourse
-from werkzeug.security import generate_password_hash, check_password_hash
+from ..models.courses import Course, StudentCourse, Score
 from http import HTTPStatus
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, unset_jwt_cookies
-from redis import Redis
+from flask_jwt_extended import jwt_required, get_jwt_identity, unset_jwt_cookies
+
 
 
 admin_namespace = Namespace('student', description = 'Admin accessible route')
 
+def is_admin(self, f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # check if user is admin
+        user_id = get_jwt_identity()
+        current_user = User.get_by_id('user_id')
+        if not current_user.is_admin:
+            return {
+                'message': 'You are not authorized to perform this action'
+            }
+        return f(*args, **kwargs)
+    return decorated_function
 
 
+def calculate_grades(self):
+    if self.score >= 90:
+        return 'A'
+    elif self.score >= 80:
+        return 'B'
+    elif self.score >= 70:
+        return 'C'
+    elif self.score >= 60:
+        return 'D'
+    else:
+        return 'F'
 
 
 course_model = admin_namespace.model(
@@ -34,6 +57,20 @@ course_model = admin_namespace.model(
 )
 
 
+
+course_list_model = admin_namespace.model(
+    'CourseList', {
+        'courses': fields.List(fields.Nested(course_model))
+    }
+)
+
+student_scores = admin_namespace.model('StudentScores', {
+    'course_code': fields.String,
+    'score': fields.Integer
+})
+
+
+
 student_model = admin_namespace.model(
     'Student', {
 		'id': fields.String(required=True),
@@ -42,7 +79,7 @@ student_model = admin_namespace.model(
         'email': fields.String(required=True, description="Student's Email"),
 		'student_id': fields.String(required=True, description="Studend ID"),
 		'password': fields.String(required=True, default="Student101", description="Student's Password"),
-        'courses': fields.String(required=True, description='courses for a student' ),
+        'registered_courses': fields.List(fields.Nested(course_list_model)),
 		'gpa': fields.String( required=True, description='Student gpa')
         
 	}
@@ -51,15 +88,37 @@ student_model = admin_namespace.model(
 
 
 
+course_model = admin_namespace.model(
+    'Course', {
+		'id': fields.String(required=True),
+        'course_title': fields.String(required=True, description="Course Name"),
+        'course_code': fields.String(required=True, description="'Course Code"),
+        'course_description': fields.String(required=True, description="Course Description"),
+        'course_unit': fields.String(required=True, description="Course Unit"),
+        'course_level': fields.String(required=True, description="Course Level"),
+        'score': fields.Float(required=True, default=0.0),
+        'tutor_name': fields.String(required=True, description="Course Level"),
+        'students': fields.List(fields.Nested(student_model))
+	}
+)
+
+
+
 
 student_course_model = admin_namespace.model(
     'StudentCourse', {
         'id': fields.String(required=True, description="'User's Name"),
         'course_id': fields.String(required=True, description="Student's First Name"),
-        'student_id': fields.String(required=True, description="'Student's Last Name"),
-        'grade': fields.String(required=True, description="Studend ID")
+        'student_id': fields.String(required=True, description="'Student's Last Name")
     }
 )
+
+# enroll_course_model = admin_namespace.model(
+#     'StudentCourse', {
+#         'id': fields.String(required=True, description="'User's Name"),
+#         'student_id': fields.String(required=True, description="'Student's Last Name"),
+#     }
+# )
 
 
 
@@ -97,20 +156,18 @@ class GetStudents(Resource):
 
     @admin_namespace.expect(student_model)
     @admin_namespace.marshal_with(student_model)
-    @admin_namespace.doc(
-        description="Create a new student"
-    )
+    @admin_namespace.doc(description="Create a new student")
     @jwt_required()
-    def post(Self):
+    def post(self):
         """
-            Create a new student
+        Create a new student
         """
-            
-        # username = get_jwt_identity()
-        # current_user = User.query.filter_by(username=username).first()
         data = admin_namespace.payload
 
         student = Student.query.filter_by(student_id=data['student_id']).first()
+
+        # courses = Course.query.filter(Course.id.in_(data['courses'])).all()
+
 
         if student:
             return {
@@ -118,12 +175,12 @@ class GetStudents(Resource):
             }, HTTPStatus.BAD_REQUEST
 
         new_student = Student(
-            student_id = 'ALT00' + generate_random_string(1),
-            email = data['email'],
-            first_name = data['first_name'],
-            last_name = data['last_name'],
-            password_hash = data['password'],
-            # registered_courses=['registered_courses'],
+            student_id='ALT00' + generate_random_string(1),
+            email=data['email'],
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            password_hash=data['password'],
+            # registered_courses=courses, # set to the list of courses
             gpa=data['gpa']
         )
 
@@ -132,7 +189,7 @@ class GetStudents(Resource):
         return new_student, HTTPStatus.CREATED, {
             'message': 'Student created successfully'
         }
-    
+
 
 
 @admin_namespace.route('/student/<int:student_id>')
@@ -179,8 +236,8 @@ class GetUpdateDelete(Resource):
         update_student.first_name = data['first_name']
         update_student.last_name = data['last_name']
         update_student.password = data['password']
-        # update_student.registered_courses = data['registered_courses']
-        # update_student.gpa = data['gpa']
+        update_student.registered_courses = data['registered_courses']
+        update_student.gpa = data['gpa']
 
         update_student.update()
 
@@ -216,24 +273,24 @@ class GetUpdateDelete(Resource):
 @admin_namespace.route('/courses')
 class GetCourses(Resource):
     
-    @admin_namespace.marshal_with(course_model, as_list=True)
-    @admin_namespace.doc(
-        description='Get all registered courses',
-    )
-    @jwt_required()
-    def get(self):
-        """
-            Retrieve all courses
-        """
+    # @admin_namespace.marshal_with(course_model, as_list=True)
+    # @admin_namespace.doc(
+    #     description='Get all registered courses',
+    # )
+    # @jwt_required()
+    # def get(self):
+    #     """
+    #         Retrieve all courses
+    #     """
 
-        courses = Course.query.all()
+    #     courses = Course.query.all()
         
-        if courses is None:        
-                    return {
-                        'message': 'No student has been registered'
-                    }, HTTPStatus.BAD_REQUEST
+    #     if courses is None:        
+    #                 return {
+    #                     'message': 'No student has been registered'
+    #                 }, HTTPStatus.BAD_REQUEST
         
-        return courses, HTTPStatus.OK
+    #     return courses, HTTPStatus.OK
     
 
     @admin_namespace.expect(course_model)
@@ -242,6 +299,7 @@ class GetCourses(Resource):
         description="Create a new course"
     )
     @jwt_required()
+    # @is_admin()
     def post(Self):
         """
             Create a new course
@@ -276,13 +334,53 @@ class GetCourses(Resource):
     
 
 
+@admin_namespace.route('/students/course/<int:course_id>')
+class GetUpdateDelete(Resource):
+    @admin_namespace.marshal_with(student_model)
+    @admin_namespace.doc(
+        description='Retrieve all students registered for a particular course', params={
+            'course_id': 'The course id'
+        }
+    )
+    @jwt_required()
+    def get(self, course_id):
+        """
+            Retrieve all students registered for a particular course
+        """
+        courses = Course.query.filter_by(id=course_id).all()
+        if courses:
+            students = Student.query.all()
+            if students:
+                return students, HTTPStatus.OK
+            return {
+                'message': 'No student has been registered for this course'
+            }
+        
+        return {
+            'message': 'Course does not exist'
+        }, HTTPStatus.BAD_REQUEST
+
+
+
+
+
+            # students = []
+            # for course in courses:
+            #     student = Student.query.filter_by(id=course.student_id).first()
+            #     students.append(student)
+
+
+    
+
+
 @admin_namespace.route('/course/<int:course_id>')
 class GetUpdateDelete(Resource):
     
     @admin_namespace.marshal_with(course_model)
     @admin_namespace.doc(
         description='Get a course by id', params={
-            'course_id': 'The course id'
+            'course_id': 'The course id',
+            'student_id': 'The student id'
         }
     )
     @jwt_required()
@@ -309,29 +407,35 @@ class GetUpdateDelete(Resource):
         }
     )
     @jwt_required()
-    def patch(self, course_id):
+    def patch(self, course_id, student_id):
         """
-            Update a course by id
+            Update a student's course by id
         """
-        current_user = get_jwt_identity()
+        
+        student = Student.query.filter_by(id=student_id).first()
+        
 
-        update_course = Course.get_by_id(course_id)
-        data = admin_namespace.payload
+        if student:
+            # student_id = Student.get_by_id(student_id)
+            # check if student is already registered for the course
+            if course_id in student.registered_courses:
+                update_course = Course.get_by_id(course_id)
+                data = admin_namespace.payload
 
-        update_course.course_title = data['course_title']
-        update_course.course_code = data['course_code']
-        update_course.course_description = data['course_description']
-        update_course.course_unit = data['course_unit']
-        update_course.score = data['score']
-        update_course.tutor_name = data['tutor_name']
-        # update_student.registered_courses = data['registered_courses']
-        # update_student.gpa = data['gpa']
+                update_course.course_title = data['course_title']
+                update_course.course_code = data['course_code']
+                update_course.course_description = data['course_description']
+                update_course.course_unit = data['course_unit']
+                update_course.score = data['score']
+                update_course.tutor_name = data['tutor_name']
+                # update_student.registered_courses = data['registered_courses']
+                # update_student.gpa = data['gpa']
 
-        update_course.update()
+                update_course.update()
 
-        return update_course, HTTPStatus.OK, {
-            'message': 'Changes successfully made to {course.id}'
-        }
+                return update_course, HTTPStatus.OK, {
+                    'message': 'Changes successfully made to {course.id}'
+                }
     
 
     @admin_namespace.expect(course_model)
@@ -363,51 +467,45 @@ class GetUpdateDelete(Resource):
 
 
 
-@admin_namespace.route('/courses/<int:course_id>/register/<int:student_id>')
+@admin_namespace.route('/course/<int:course_id>/student/<int:student_id>')
 class RegisterStudentCourse(Resource):
     
     @admin_namespace.expect(course_model)
     # @admin_namespace.marshal_with(student_course_model)
     @admin_namespace.doc(
-        description='Register a student for a course', params={
-            'student_id': 'The student id',
-            'course_id': 'The course id'
-        }
+        description='Register a student for a course'
     )
     @jwt_required()
+
     def post(self, student_id, course_id):
         """
             Register a student for a course using student_id and course_id
         """
         
-        current_user_id = get_jwt_identity() 
-
-        student = Student.query.filter_by(id=current_user_id).first()   
+        # get the student
+        student = Student.query.filter_by(id=student_id).first()
+        if not student:
+            return {'message': 'Student does not exist'}, HTTPStatus.NOT_FOUND
+        
+        # get the course
         data = request.get_json()
-        course = Course.query.filter_by(id=data.get('course_id')).first()  
-        if course:
+        course = Course.query.filter_by(id=course_id).first()  
+        if course is None:
+            return {'message': 'Course does not exist'} , HTTPStatus.NOT_FOUND
             #check if student is already registered for this course
-            get_student_in_course = StudentCourse.query.filter_by(student_id=student.id, course_id=course.id).first()
-            if get_student_in_course:
-                return {
-                    'message':'Course has already been registered'
-                    } , HTTPStatus.OK
-            # Register the student to the course
-            add_student_to_course = StudentCourse(student_id=student.id, course_id=course.id)
-            try:
-                add_student_to_course.save()
-                return {'message': 'Course registered successfully'} , HTTPStatus.CREATED
-            except:
-                db.session.rollback()
-                return {'message': 'An error occurred while registering course'}, HTTPStatus.INTERNAL_SERVER_ERROR
-        return {'message': 'Course does not exist'} , HTTPStatus.NOT_FOUND
+        get_student_in_course = StudentCourse.query.filter_by(student_id=student.id, course_id=course.id).first()
+        if get_student_in_course:
+            return {
+                'message':'Course has already been registered'
+                } , HTTPStatus.OK
+        # Register the student to the course
+        add_student_to_course = StudentCourse(student_id=student.id, course_id=course.id)
+        add_student_to_course.save()
+        return {
+            'message': 'Student successfully registered for course'
+        }, HTTPStatus.CREATED
+        
     
-    
-
-
-
-
-
 
 
 
@@ -416,6 +514,29 @@ class RegisterStudentCourse(Resource):
 
 
 # All endpoints for the admin to handle grades
+
+@admin_namespace.route('student/<int:student_id>/courses')
+class GetStudentCourses(Resource):
+    @admin_namespace.marshal_with(course_list_model)
+    @admin_namespace.doc(
+        description='Get all scores for all courses a student registered for', params={
+            'student_id': 'The student id'
+        }
+    )
+    @jwt_required()
+    def get(self, student_id):
+        """
+            Get all scores for a student
+        """
+        student = Student.get_by_id(student_id)
+        if student:
+            course = StudentCourse.query.filter_by(student_id=student_id).all()
+            return course.score, HTTPStatus.OK
+        else:
+            return course.score, HTTPStatus.OK
+
+
+
 
 
 @admin_namespace.route('/student/<int:student_id>/course/<int:course_id>')

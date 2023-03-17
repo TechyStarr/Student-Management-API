@@ -1,17 +1,16 @@
 import unittest
-from ..import create_app
-from ..config import config_dict
+from .. import create_app
+from ..config.config import config_dict
 from ..utils import db
 from werkzeug.security import generate_password_hash
-from ..models.user import Student, Tutor, Admin, User
-
+from ..models.user import User
 
 
 class UserTestCase(unittest.TestCase):
-
+    
     def setUp(self):
         self.app = create_app(config=config_dict['test'])
-        self.appctx = self.app.app_context()
+        self.appctx = self.app.app_context() # Creates the db
 
         self.appctx.push()
         self.client = self.app.test_client()
@@ -19,7 +18,7 @@ class UserTestCase(unittest.TestCase):
         db.create_all()
 
 
-    def tearDown(self):
+    def tearDown(self): # teardown resets existing tables in the database
         db.drop_all()
 
         self.appctx.pop()
@@ -29,15 +28,33 @@ class UserTestCase(unittest.TestCase):
         self.client = None
 
     def test_user_registration(self):
+        
         data = {
-            'username': 'testuser',
-            'email': 'test_user@gmail.com',
-            'password_hash': 'testpassword',
+            "username": "testuser",
+            "email": "testuser@gmail.com",
+            "password_hash": "password"
         }
-        response = self.client.post('/auth/register', json=data)
+        response = self.client.post('/auth/signup', json=data)
 
-        user = User.query.filter_by(email="test_user@gmail.com").first()
-
-        student = Student.query.filter_by(username=data['username']).first()
+        user = User.query.filter_by(email="testuser@gmail.com").first()
+        
+        assert user.username == "testuser"
 
         assert response.status_code == 201
+
+
+    def test_user_login(self):
+        data = {
+            "email": "testuser@gmail.com",
+            "password": "password"
+        }
+
+        response = self.client.post('/auth/login', json=data)
+
+        assert response.status_code == 200
+
+    
+
+    
+
+

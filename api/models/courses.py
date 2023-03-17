@@ -13,14 +13,14 @@ class Course(db.Model):
     __tablename__ = 'courses'
 
     id = db.Column(db.Integer(), primary_key=True)
-    course_title = db.Column(db.String(80), nullable=False)
+    course_title = db.Column(db.String(80), nullable=False, unique=True)
     course_code = db.Column(db.String(20), nullable=False, unique=True)
     course_description = db.Column(db.String(200), nullable=False)
     course_unit = db.Column(db.Integer(), nullable=False)
     course_level = db.Column(db.String(15), nullable=False)
     score = db.Column(db.Float(10), default=0)
     tutor_name = db.Column(db.String, db.ForeignKey('tutors.tutor_name'))
-    # student = db.relationship('Student', secondary='student_courses', backref=db.backref('courses', lazy='dynamic'))
+    students = db.relationship('Student', secondary='student_courses', lazy='dynamic')
     date_created = db.Column(db.DateTime(), default=datetime.utcnow)
 
 
@@ -54,9 +54,6 @@ class StudentCourse(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'))
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
-    # grades = db.relationship('Score', backref='student_course', lazy=True)
-    
-
 
 
     
