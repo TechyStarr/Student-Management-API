@@ -20,8 +20,12 @@ Visit [website](http://olakaycoder1.pythonanywhere.com/)
 
 Clone the repository
 
-```console git clone https://github.com/TechyStarr/Student-Management-API
+
+```console
+git clone https://github.com/TechyStarr/Student-Management-API.git
 ```
+
+
 
 Change directory to the cloned folder
 
