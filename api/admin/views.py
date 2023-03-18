@@ -64,8 +64,7 @@ course_list_model = admin_namespace.model(
     }
 )
 
-student_scores = admin_namespace.model('StudentScores', {
-    'course_code': fields.String,
+student_score = admin_namespace.model('StudentScores', {
     'score': fields.Integer
 })
 
@@ -93,12 +92,8 @@ course_model = admin_namespace.model(
 		'id': fields.String(required=True),
         'course_title': fields.String(required=True, description="Course Name"),
         'course_code': fields.String(required=True, description="'Course Code"),
-        'course_description': fields.String(required=True, description="Course Description"),
         'course_unit': fields.String(required=True, description="Course Unit"),
-        'course_level': fields.String(required=True, description="Course Level"),
-        'score': fields.Float(required=True, default=0.0),
-        'tutor_name': fields.String(required=True, description="Course Level"),
-        'students': fields.List(fields.Nested(student_model))
+        'tutor_name': fields.String(required=True, description="Course Level")
 	}
 )
 
@@ -113,21 +108,17 @@ student_course_model = admin_namespace.model(
     }
 )
 
-# enroll_course_model = admin_namespace.model(
-#     'StudentCourse', {
-#         'id': fields.String(required=True, description="'User's Name"),
-#         'student_id': fields.String(required=True, description="'Student's Last Name"),
-#     }
-# )
+score_model = admin_namespace.model(
+    'Score', {
+        'id': fields.String(required=True, description="'User's Name"),
+        'student_id': fields.String(required=True, description="'Student's Last Name"),
+        'course_id': fields.String(required=True, description="Student's First Name"),
+        'score': fields.Float(required=True, description="Student's First Name"),
+    }
+)
 
 
 
-
-# Retrieve the student from the database using student_id/matric no
-# Use the student's login details to autheticate the request
-# Create a new course oject with the given data
-# Add the course to the student's courses list
-# Save the changes to the database
 
 
 
@@ -136,12 +127,12 @@ class GetStudents(Resource):
     
     @admin_namespace.marshal_with(student_model, as_list=True)
     @admin_namespace.doc(
-        description='Get all registered students',
+        description='Get all students',
     )
     @jwt_required()
     def get(self):
         """
-            Retrieve all students
+            Get all students
         """
 
         students = Student.query.all()
@@ -183,8 +174,9 @@ class GetStudents(Resource):
             # registered_courses=courses, # set to the list of courses
             gpa=data['gpa']
         )
-
         new_student.save()
+
+        
 
         return new_student, HTTPStatus.CREATED, {
             'message': 'Student created successfully'
@@ -193,7 +185,7 @@ class GetStudents(Resource):
 
 
 @admin_namespace.route('/student/<int:student_id>')
-class GetUpdateDelete(Resource):
+class GetUpdateDeleteStudent(Resource):
 
     @admin_namespace.marshal_with(student_model)
     @admin_namespace.doc(
@@ -273,24 +265,24 @@ class GetUpdateDelete(Resource):
 @admin_namespace.route('/courses')
 class GetCourses(Resource):
     
-    # @admin_namespace.marshal_with(course_model, as_list=True)
-    # @admin_namespace.doc(
-    #     description='Get all registered courses',
-    # )
-    # @jwt_required()
-    # def get(self):
-    #     """
-    #         Retrieve all courses
-    #     """
+    @admin_namespace.marshal_with(course_model, as_list=True)
+    @admin_namespace.doc(
+        description='Get all registered courses',
+    )
+    @jwt_required()
+    def get(self):
+        """
+            Retrieve all courses
+        """
 
-    #     courses = Course.query.all()
+        courses = Course.query.all()
         
-    #     if courses is None:        
-    #                 return {
-    #                     'message': 'No student has been registered'
-    #                 }, HTTPStatus.BAD_REQUEST
+        if courses is None:        
+                    return {
+                        'message': 'No student has been registered'
+                    }, HTTPStatus.BAD_REQUEST
         
-    #     return courses, HTTPStatus.OK
+        return courses, HTTPStatus.OK
     
 
     @admin_namespace.expect(course_model)
@@ -319,10 +311,7 @@ class GetCourses(Resource):
         new_course = Course(
             course_title = data['course_title'],
             course_code = data['course_code'],
-            course_description = data['course_description'],
             course_unit = data['course_unit'],
-            course_level = data['course_level'],
-            score = data['score'],
             tutor_name = data['tutor_name']
         )
 
@@ -359,6 +348,30 @@ class GetUpdateDelete(Resource):
         return {
             'message': 'Course does not exist'
         }, HTTPStatus.BAD_REQUEST
+    
+
+
+@admin_namespace.route('/course/<int:course_id>/students')
+class GetStudent(Resource):
+    # @admin_namespace.marshal_with(student_model)
+    @admin_namespace.doc(
+        description='Retrieve all students for a particular course', params={
+            'course_id': 'The course id'
+        }
+    )
+    @jwt_required()
+    def get(self, course_id):
+        """
+            Retrieve all students for a particular course
+        """
+        courses = StudentCourse.query.filter_by(id=course_id).all()
+        for course in courses:
+            students = Student.query.all()
+            if students in courses:
+                return students, HTTPStatus.OK
+            return {
+                'message': 'No student has been registered for this course'
+            }
 
 
 
@@ -374,7 +387,7 @@ class GetUpdateDelete(Resource):
 
 
 @admin_namespace.route('/course/<int:course_id>')
-class GetUpdateDelete(Resource):
+class GetUpdateDeleteCourse(Resource):
     
     @admin_namespace.marshal_with(course_model)
     @admin_namespace.doc(
@@ -388,12 +401,12 @@ class GetUpdateDelete(Resource):
         """
             Retrieve a course by id
         """
-
+        data = request.get_json()
         course = Course.get_by_id(course_id)
         
         if course is None:  
                     return {
-                        'message': 'This student does not exist'
+                        'message': 'This course does not exist'
                     }, HTTPStatus.BAD_REQUEST
 
         return course, HTTPStatus.OK
@@ -506,6 +519,8 @@ class RegisterStudentCourse(Resource):
         }, HTTPStatus.CREATED
         
     
+
+
 
 
 

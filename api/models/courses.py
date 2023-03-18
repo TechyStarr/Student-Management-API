@@ -15,12 +15,9 @@ class Course(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     course_title = db.Column(db.String(80), nullable=False, unique=True)
     course_code = db.Column(db.String(20), nullable=False, unique=True)
-    course_description = db.Column(db.String(200), nullable=False)
     course_unit = db.Column(db.Integer(), nullable=False)
-    course_level = db.Column(db.String(15), nullable=False)
-    score = db.Column(db.Float(10), default=0)
     tutor_name = db.Column(db.String, db.ForeignKey('tutors.tutor_name'))
-    students = db.relationship('Student', secondary='student_courses', lazy='dynamic')
+
     date_created = db.Column(db.DateTime(), default=datetime.utcnow)
 
 
@@ -82,20 +79,19 @@ class StudentCourse(db.Model):
 class Score(db.Model):
     __tablename__ = 'scores'
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer(), primary_key=True, autoincrement=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), primary_key=True)
     score = db.Column(db.Float(10), nullable=True)
-    percent = db.Column(db.String(10), nullable=True)
-    gpa = db.Column(db.Float(10))
+    # grade = db.Column(db.String(10), nullable=True)
     # date_created = db.Column(db.Datetime(), default=datetime.utcnow)
 
 
-    @classmethod
-    def __init__(self, student_id, course_id, score):
-        self.student_id = student_id
-        self.course_id = course_id
-        self.score = score
+    # @classmethod
+    # def __init__(self, student_id, course_id, score):
+    #     self.student_id = student_id
+    #     self.course_id = course_id
+    #     self.score = score
     
     def save(self):
         db.session.add(self)

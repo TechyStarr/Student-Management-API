@@ -3,6 +3,7 @@ from flask_restx import Api
 from .auth.views import auth_namespace
 from .admin.views import admin_namespace
 from .students.views import course_namespace
+from .admin.grades import grade_namespace
 from .config.config import config_dict
 from .utils import db
 from .models.courses import Course
@@ -63,6 +64,7 @@ def create_app(config=config_dict['dev']):
     api.add_namespace(auth_namespace)
     api.add_namespace(course_namespace, path='/courses')
     api.add_namespace(admin_namespace, path='/admin')
+    api.add_namespace(grade_namespace, path='/grades')
     
     
 

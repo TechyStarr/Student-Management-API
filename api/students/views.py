@@ -66,75 +66,51 @@ class ResetPassword(Resource):
         pass
 
 
-@course_namespace.route('student/<int:student_id>/courses')
+@course_namespace.route('/student/<int:student_id>/courses')
 class GetStudentCourses(Resource):
     @course_namespace.marshal_with(course_model)
     @course_namespace.doc(
-        description='Get all scores for all courses a student registered for', params={
+        description='Get all courses a student registered for', params={
             'student_id': 'The student id'
         }
     )
     @jwt_required()
     def get(self, student_id):
+        """
+            Get all courses for a student
+        """
+        student = Student.query.filter_by(id=student_id).first()
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            return student.registered_courses, HTTPStatus.OK
+        
+
+
+@course_namespace.route('/student/<int:student_id>/courses')
+class GetCourseStudent(Resource):
+    @course_namespace.marshal_with(course_model)
+    @course_namespace.doc(
+        description='Get students registered in a course', params={
+            'course_id': 'The course id'
+        }
+    )
+    @jwt_required()
+    def get(self, course_id):
         """
             Get all scores for a student
         """
-        student = Student.get_by_id(student_id)
-        if student is None:
+        course = Course.query.filter_by(id=course_id).first()
+        if course is None:
             return {
             'message': 'This student does not exist'
                 }, HTTPStatus.BAD_REQUEST
         else:
-            return student.registered_courses, HTTPStatus.OK
+            return course.student_courses, HTTPStatus.OK
 
 
-
-
-@course_namespace.route('/students/<int:student_id>/courses')
-class GetStudents(Resource):
-    
-    @course_namespace.marshal_with(student_course_model, as_list=True)
-    @course_namespace.doc(
-        description='Get all courses registered to a student',
-    )
-    @jwt_required()
-    def get(self, student_id):
-        """
-            Retrieve all courses registered to a student
-        """
-
-        current_user = Student.get_by_id(student_id)
-
-        student = get_jwt_identity()
-        if student:
-            courses = StudentCourse.query.all()
-            return courses, HTTPStatus.OK
-        return {
-            'message': 'No students found'
-        }
-
-
-
-@course_namespace.route('/student')
-class RetrieveStudentCourses(Resource):
-    @course_namespace.marshal_with(course_model)
-    @course_namespace.doc(
-        description='Get all scores for all courses a student registered for', params={
-            'student_id': 'The student id'
-        }
-    )
-    @jwt_required()
-    def get(self):
-        """
-            Get all scores for a 
-        """
-        student = Student.get_by_id(get_jwt_identity())
-        if student is None:
-            return {
-            'message': 'This student does not exist'
-                }, HTTPStatus.BAD_REQUEST
-        else:
-            return student.registered_courses, HTTPStatus.OK
 
 
     

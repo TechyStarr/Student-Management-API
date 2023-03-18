@@ -1,5 +1,5 @@
 import unittest
-from ..import create_app
+from .. import create_app
 from ..config.config import config_dict
 from ..utils import db
 from werkzeug.security import generate_password_hash
