@@ -1,102 +1,275 @@
 from ..utils import db
 from functools import wraps
-from flask import request
+from flask import request, abort
 from flask_restx import Resource, fields, Namespace
+from ..admin.views import student_model, create_course_model, student_course_model
 from ..auth.views import generate_random_string, generate_password
 from ..models.user import Student, User
 from ..models.courses import Course, StudentCourse
+from ..auth.views import generate_random_string, generate_password, login_model
+from werkzeug.security import generate_password_hash, check_password_hash
 from http import HTTPStatus
-from flask_jwt_extended import jwt_required, get_jwt_identity, unset_jwt_cookies
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, unset_jwt_cookies
+from redis import Redis
+
+
+grade_namespace = Namespace('Grades', description = 'Student accessible route')
+
+
+def is_admin(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # check if user is admin
+        password = get_jwt_identity()
+        if password == 'Student101':
+            abort(401, 'You are not authorized to access this route')
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def calculate_grades(self):
+    if self.score >= 90:
+        return 'A'
+    elif self.score >= 80:
+        return 'B'
+    elif self.score >= 70:
+        return 'C'
+    elif self.score >= 60:
+        return 'D'
+    else:
+        return 'F'
 
 
 
-grade_namespace = Namespace('score', description = 'Student accessible route')
 
 
-score_model = grade_namespace.model(
-    'Score', {
-        'student_id': fields.String(required=True, description="Student's First Name"),
-        'course_id': fields.String(required=True, description="'Student's Last Name"),
+student_score_model = grade_namespace.model(
+    'StudentScore', {
+        'id': fields.String(required=True, description="'User's Name"),
+        'course_id': fields.String(required=True, description="Student's First Name"),
+        'student_id': fields.String(required=True, description="'Student's Last Name"),
         'score': fields.String(required=True, description="Studend ID")
     }
 )
 
-student_score = grade_namespace.model('StudentScores', {
-    'course_id': fields.Integer(required=True, description="Course ID"),
-    'score': fields.Integer(required=True, description="Student's Score")
-})
+
+# student_course_code
 
 
 
-student_model = grade_namespace.model(
-    'Student', {
-		'id': fields.String(required=True),
-        'first_name': fields.String(required=True, description="Student's First Name"),
-        'last_name': fields.String(required=True, description="'Student's Last Name"),
-        'email': fields.String(required=True, description="Student's Email"),
-		'student_id': fields.String(required=True, description="Studend ID"),
-		'password': fields.String(required=True, default="Student101", description="Student's Password"),
-        # 'registered_courses': fields.List(fields.Nested(course_list_model)),
-		'gpa': fields.String( required=True, description='Student gpa')
+
+
+
+@grade_namespace.route('/student/<int:student_id>/courses')
+class GetStudentCourses(Resource):
+    @grade_namespace.marshal_with(student_course_model)
+    @grade_namespace.doc(
+        description='Get all courses a student registered for', params={
+            'student_id': 'The student id'
+        }
+    )
+    @jwt_required()
+    def get(self, student_id):
+        """
+            Get all courses for a student
+        """
+        student = Student.query.filter_by(id=student_id).first()
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            return student.registered_courses, HTTPStatus.OK
         
-	}
-)
+
+
+# @grade_namespace.route('/student/<int:student_id>/courses')
+# class GetCourseStudent(Resource):
+#     @grade_namespace.marshal_with(student_course_model)
+#     @grade_namespace.doc(
+#         description='Get students registered in a course', params={
+#             'course_id': 'The course id'
+#         }
+#     )
+#     @jwt_required()
+#     def get(self, course_id):
+#         """
+#             Get all scores for a student
+#         """
+#         course = Course.query.filter_by(id=course_id).first()
+#         if course is None:
+#             return {
+#             'message': 'This student does not exist'
+#                 }, HTTPStatus.BAD_REQUEST
+#         else:
+#             return course.student_courses, HTTPStatus.OK
+
+
+
+
+
+grade_points = {
+    'A': 4,
+    'B': 3,
+    'C': 2,
+    'D': 1,
+    'F': 0
+}
+
+
+def calculate_gpa(grades):
+    total_grade_points = 0
+    for grade in grades:
+        total_grade_points += grade_points[grade]
+        total_credit += grade['credits']
+    return total_grade_points / total_credit
 
 
 
 
 
 
-grade_list_model = grade_namespace.model(
-    'ScoreView', {
-        'id': fields.String(required=True, description="'User's Name"),
-        'student_id': fields.String(required=True, description="Student's First Name"),
-        'course_id': fields.String(required=True, description="'Student's Last Name"),
-        'score': fields.String(required=True, description="Studend ID"),
-        'course_name': fields.String(required=True, description="Studend ID")
-    }
-)
 
 
-@grade_namespace.route('/course/<int:course_id>/student/<int:student_id>')
-class UploadStudentScoreForCourse(Resource):
-        
-        @grade_namespace.expect(student_score)
-        @grade_namespace.marshal_with(score_model)
-        @grade_namespace.doc(
-            description='Upload a student score for a course'
-        )
-        @jwt_required()
-        def post(self, student_id: int, course_id: int):
-            """
-                Upload a student score for a course
-            """
-            data = grade_namespace.payload
-            name = get_jwt_identity()
+    
 
-            student = Student.query.filter_by(id=student_id).first()
+@grade_namespace.route('/student/<int:student_id>')
+class CalculateGPA(Resource):
+    
+    @grade_namespace.marshal_with(student_model)
+    @grade_namespace.doc(
+        description='Calculate a student GPA', params={
+            'student_id': 'The student id'
+        }
+    )
+    @jwt_required()
+    @is_admin
+    def get(self, student_id):
+        """
+            Calculate a student GPA
+        """
+
+        student = Student.get_by_id(student_id)
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            
+            #Calculate GPA
+            gpa = 0
+            student = StudentCourse.query.filter_by(id=student_id).first()
 
             if not student:
-                grade_namespace.abort(HTTPStatus.NOT_FOUND, message="Student not found")
+                return {
+                    'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+            
 
-            course = Course.query.filter_by(id=course_id).first()
+        score = StudentCourse.query.filter_by(student_id=student_id).all()
+        grades = [calculate_grades(score) for score in score]
+        gpa = calculate_gpa(grades)
+        return {
+            'gpa': gpa
+        }, HTTPStatus.OK
+    
 
-            if not course:
-                grade_namespace.abort(HTTPStatus.NOT_FOUND, message="Course not found")
+@grade_namespace.route('/student/<int:student_id>/scores')
+class StudentScore(Resource):
+    @grade_namespace.marshal_with(student_score_model)
+    @grade_namespace.doc(
+        description='Get all scores', params={
+            'student_id': 'The student id'
+        }
+    )
+    @jwt_required()
+    @is_admin
+    def get(self, student_id):
+        """
+            Get all scores
+        """
+        student = StudentCourse.query.filter_by(id=student_id).first()
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            for score in StudentCourse:
+                return score, {
+                    'score': student.score
+                }
 
-            grade  = Score.query.filter_by(student_id=student_id, course_id=course_id).first()
 
-            if grade:
-                grade_namespace.abort(HTTPStatus.CONFLICT, message="Grade already uploaded")
 
-            new_grade = Score(
-                student_id=student_id,
-                course_id=course_id,
-                score=data['score']
-            )
 
-            new_grade.save()
-
-            return new_grade, HTTPStatus.CREATED
-
+@grade_namespace.route('/student/<int:student_id>/courses')
+class GetCourseStudent(Resource):
+    @grade_namespace.marshal_with(student_course_model)
+    @grade_namespace.doc(
+        description='Get students registered in a course', params={
+            'course_id': 'The course id'
+        }
+    )
+    @jwt_required()
+    def get(self, course_id):
+        """
+            Get all scores fo
+        """
+        scores = []
+        course = StudentCourse.query.filter_by(id=course_id).first()
+        if course is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        else:
+            return course, HTTPStatus.OK
         
+
+    @grade_namespace.expect(student_course_model)
+    @grade_namespace.doc(
+        description='Update student details in a course', params={ 
+            'course_id': 'The course id'
+        }
+    )
+    @jwt_required()
+    @is_admin
+    def patch(self, course_id):
+        """
+            Update student details in a course
+        """
+        student = StudentCourse.query.filter_by(id=course_id).first()
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        
+        #Update student details
+
+        data = grade_namespace.payload
+        student.course_code = data['course_code']
+        student.course_unit = data['course_unit']
+        student.score = data['score']
+        student.grade = data['grade']
+        student.first_name = data['first_name']
+        student.last_name = data['last_name']
+
+        student.save()
+
+        try:
+            return student, {
+                'message': 'Successfully updated'
+            }, HTTPStatus.OK
+        except:
+            return {
+                'message': 'Something went wrong'
+            }, HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+
+
+
+
+
+# Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY3OTI0NTQ3OCwianRpIjoiZGNlMDdmM2UtOWEwOC00MGJlLWI1MGMtYzllMzU3YjQ3OTRlIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6InN0YXJyQGVtYWlsIiwibmJmIjoxNjc5MjQ1NDc4LCJleHAiOjE2NzkyNTA4Nzh9.j7TsB-ZAtRuBoOlXNExIE2h-YTuMexcxdkV2yR2BgdE
+
+

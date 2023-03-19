@@ -19,8 +19,8 @@ student_namespace = Namespace('Student', description = 'Student accessible route
 
 
 
-student_course_model = student_namespace.model(
-    'StudentCourse', {
+student_score_model = student_namespace.model(
+    'StudentScore', {
         'id': fields.String(required=True, description="'User's Name"),
         'course_id': fields.String(required=True, description="Student's First Name"),
         'student_id': fields.String(required=True, description="'Student's Last Name"),

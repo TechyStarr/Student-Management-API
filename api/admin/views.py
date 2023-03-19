@@ -60,11 +60,6 @@ course_list_model = admin_namespace.model(
     }
 )
 
-course_model = admin_namespace.model(
-    'Course', {
-        'course_id': fields.String(required=True),
-        }
-)
 
 
 show_course_model = admin_namespace.model(
@@ -77,10 +72,6 @@ show_course_model = admin_namespace.model(
         'tutor_name': fields.String(required=True, description="Course Level")
     }
 )
-
-student_score = admin_namespace.model('StudentScore', {
-    'score': fields.Integer
-})
 
 
 
@@ -321,7 +312,7 @@ class GetCourses(Resource):
 
 
 @admin_namespace.route('/course/<int:course_id>/students')
-class GetStudent(Resource):
+class GetStudentsForCourse(Resource):
     # @admin_namespace.marshal_with(student_model)
     @admin_namespace.doc(
         description='Retrieve all students for a particular course', params={
@@ -353,14 +344,13 @@ class GetStudent(Resource):
     
 
 
-@admin_namespace.route('/course/<int:course_id>/students/<int:student_id>')
+@admin_namespace.route('/course/<int:course_id>')
 class GetCourse(Resource):
     
     @admin_namespace.marshal_with(create_course_model)
     @admin_namespace.doc(
         description='Get a course by id', params={
             'course_id': 'The course id',
-            'student_id': 'The student id'
         }
     )
     @jwt_required()
@@ -391,37 +381,26 @@ class GetCourse(Resource):
     @is_admin
     def patch(self, course_id, student_id):
         """
-            Update a student's course by id
+            Update course by id
         """
-        
-        student = Student.query.filter_by(id=student_id).first()
-        
 
-        if student:
-            # get the course
-            course = Course.query.filter_by(id=course_id).first()
-                
-            # student_id = Student.get_by_id(student_id)
-            # check if student is already registered for the course
-            if course in student.registered_courses:
-                update_course = Course.get_by_id(course_id)
-                data = admin_namespace.payload
+        update_course = Course.get_by_id(course_id)
+        data = admin_namespace.payload
 
-                update_course.course_title = data['course_title']
-                update_course.course_code = data['course_code']
-                update_course.course_description = data['course_description']
-                update_course.course_unit = data['course_unit']
-                update_course.score = data['score']
-                update_course.tutor_name = data['tutor_name']
-                # update_student.registered_courses = data['registered_courses']
-                # update_student.gpa = data['gpa']
+        update_course.course_title = data['course_title']
+        update_course.course_code = data['course_code']
+        update_course.course_description = data['course_description']
+        update_course.course_unit = data['course_unit']
+        update_course.score = data['score']
+        update_course.tutor_name = data['tutor_name']
+        update_course.grade = data['grade']
 
-                update_course.update()
+        update_course.update()
 
-                return update_course, HTTPStatus.OK, {
-                    'message': 'Changes successfully made to {course.id}'
-                }
-    
+        return update_course, HTTPStatus.OK, {
+            'message': 'Changes successfully made to {course.id}'
+        }
+
 
         
     @admin_namespace.doc(
@@ -465,7 +444,7 @@ class RegisterStudentCourse(Resource):
         description='Register a student for a course'
     )
     @jwt_required()
-    # @is_admin
+    @is_admin
     def post(self, student_id):
         """
             Register a student for a course using student_id and course_id
@@ -508,90 +487,6 @@ class RegisterStudentCourse(Resource):
 
 # All endpoints for the admin to handle grades
 
-@admin_namespace.route('student/<int:student_id>/courses')
-class GetStudentCourses(Resource):
-    @admin_namespace.marshal_with(course_list_model)
-    @admin_namespace.doc(
-        description='Get all scores for all courses a student registered for', params={
-            'student_id': 'The student id'
-        }
-    )
-    @jwt_required()
-    @is_admin
-    def get(self, student_id):
-        """
-            Get all scores for a student
-        """
-        student = Student.get_by_id(student_id)
-        if student:
-            course = StudentCourse.query.filter_by(student_id=student_id).all()
-            return course.score, HTTPStatus.OK
-        else:
-            return course.score, HTTPStatus.OK
-
-
-
-
-
-@admin_namespace.route('/student/<int:student_id>/course/<int:course_id>')
-class CalculateGPA(Resource):
-    
-    @admin_namespace.marshal_with(student_model)
-    @admin_namespace.doc(
-        description='Calculate a student GPA', params={
-            'student_id': 'The student id'
-        }
-    )
-    @jwt_required()
-    @is_admin
-    def get(self, student_id):
-        """
-            Calculate a student GPA
-        """
-
-        student = Student.get_by_id(student_id)
-        if student is None:
-            return {
-            'message': 'This student does not exist'
-                }, HTTPStatus.BAD_REQUEST
-        else:
-            
-            #Calculate GPA
-            gpa = 0
-            for course in student.registered_courses:
-                gpa += course.grade
-            gpa = gpa / len(student.registered_courses)
-            student.gpa = gpa
-            student.update()
-            
-
-
-            return student, HTTPStatus.OK
-        
-
-
-@admin_namespace.route('/student/<int:student_id>')
-class GetStudentCourses(Resource):
-    @admin_namespace.marshal_with(course_list_model)
-    @admin_namespace.doc(
-        description='Get all courses a student registered for', params={
-            'student_id': 'The student id'
-        }
-    )
-    @jwt_required()
-    @is_admin
-    def get(self, student_id):
-        """
-            Get all courses a student registered for
-        """
-        student = Course.get_by_id(student_id)
-        if student:
-            return student.registered_courses, HTTPStatus.OK
-        else:
-            return student.registered_courses, HTTPStatus.OK
-        
-
-     
 
 
 
