@@ -3,8 +3,8 @@ from functools import wraps
 from flask import request
 from flask_restx import Resource, fields, Namespace
 from ..auth.views import generate_random_string, generate_password
-from ..models.user import Student, User, Tutor
-from ..models.courses import Course, StudentCourse, Score
+from ..models.user import Student, User
+from ..models.courses import Course, StudentCourse
 from http import HTTPStatus
 from flask_jwt_extended import jwt_required, get_jwt_identity, unset_jwt_cookies
 

@@ -107,7 +107,7 @@ class SignUp(Resource):
 
 
 
-@auth_namespace.route('/student_login')
+@auth_namespace.route('/login')
 class StudentLogin(Resource):
 
 	@auth_namespace.expect(login_model)
@@ -131,28 +131,29 @@ class StudentLogin(Resource):
 				'access_token': access_token,
 				'refresh_token': refresh_token
 			}
-
-			if not user:
-			
-				student = Student.query.filter_by(email=email).first()
-				if (student is not None) and email and check_password_hash(user.password_hash, password):
-					access_token = create_access_token(identity=student.username)
-					refresh_token = create_refresh_token(identity=student.username)
-					
-
-					response = {
-						'message': 'Logged in as {}'.format(student.student_id),
-						'access_token': access_token,
-						'refresh_token': refresh_token
-					}
-
-				else:
-					response = {
-						'message': 'Invalid Credentials'
-					}
-
-
 			return response, HTTPStatus.ACCEPTED
+
+		if not user:
+		
+			student = Student.query.filter_by(email=email).first()
+			if (student is not None) and check_password_hash(student.password_hash, password):
+				access_token = create_access_token(identity=student.email)
+				refresh_token = create_refresh_token(identity=student.email)
+				
+
+				response = {
+					'message': 'Logged in as {}'.format(student.student_id),
+					'access_token': access_token,
+					'refresh_token': refresh_token
+				}
+				return response, HTTPStatus.ACCEPTED
+
+			else:
+				response = {
+					'message': 'Invalid Credentials'
+				}
+
+				return response, HTTPStatus.ACCEPTED
 
 
 
@@ -161,16 +162,18 @@ class Refresh(Resource):
 	@jwt_required(refresh=True)
 	def post(self):
 		"""
-			Generate refresh Token
+			Refresh JWT access Token
 		"""
 
-		username = get_jwt_identity()
+		identity = get_jwt_identity()
 
-		access_token = create_access_token(identity=username)
+		access_token = create_access_token(identity=identity)
 
-		return {
+		response = {
+			'message': 'Access Token Refreshed',
 			'access_token': access_token
-		}, HTTPStatus.OK
+		}
+		return response, HTTPStatus.OK
 
 
 @auth_namespace.route('/logout')

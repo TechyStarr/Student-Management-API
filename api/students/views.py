@@ -1,8 +1,9 @@
 from ..utils import db
 from flask import request
 from flask_restx import Resource, fields, Namespace
+from ..admin.views import student_model, create_course_model, student_course_model
 from ..auth.views import generate_random_string, generate_password
-from ..models.user import Student, User, Tutor
+from ..models.user import Student, User
 from ..models.courses import Course, StudentCourse
 from ..auth.views import generate_random_string, generate_password, login_model
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,23 +12,14 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 from redis import Redis
 
 
-course_namespace = Namespace('course', description = 'Student accessible route')
+student_namespace = Namespace('Student', description = 'Student accessible route')
 
 
 
-course_model = course_namespace.model(
-    'Student', {
-		'id': fields.String(required=True, description="'User's Name"),
-        'first_name': fields.String(required=True, description="Student's First Name"),
-        'last_name': fields.String(required=True, description="'Student's Last Name"),
-		'student_id': fields.String(required=True, description="Studend ID"),
-		'password': fields.String(required=True, default="Student101", description="Student's Password")
-        
-	}
-)
 
 
-student_course_model = course_namespace.model(
+
+student_course_model = student_namespace.model(
     'StudentCourse', {
         'id': fields.String(required=True, description="'User's Name"),
         'course_id': fields.String(required=True, description="Student's First Name"),
@@ -43,33 +35,59 @@ student_course_model = course_namespace.model(
 
 
 
-# Retrieve the student from the database using student_id/matric no
-# Use the student's login details to autheticate the request
-# Create a new course oject with the given data
-# Add the course to the student's courses list
-# Save the changes to the database
+@student_namespace.route('/student/updateprofile/<int:student_id>')
+class StudentProfile(Resource):
+    @student_namespace.marshal_with(student_model)
+    @student_namespace.marshal_with(student_model)
+    @student_namespace.doc(
+        description='Update student profile'
+    )
+    @jwt_required()
+    def patch(self, student_id):
+        """
+            Update student profile
+        """
+        data = request.get_json()
+        # update_student = Student.get_by_id(student_id)
+        student = Student.query.filter_by(id=student_id).first()
+
+        if student is None:
+            return {
+            'message': 'This student does not exist'
+                }, HTTPStatus.BAD_REQUEST
+        
+        student.first_name = data['first_name']
+        student.last_name = data['last_name']
+        student.email = data['email']
+        student.password = data['password']
+
+        student.update()
+
+        return student, HTTPStatus.OK, {
+            'message': 'Your profile has been updated successfully'
+        }
+    
 
 
-@course_namespace.route('/student/<int:student_id>')
-class ResetPassword(Resource):
-
-    @course_namespace.marshal_with(login_model)
-    @course_namespace.doc(
+    @student_namespace.marshal_with(login_model)
+    @student_namespace.doc(
         description='Reset student password', params={
             'student_id': 'The student id'
         }
     )
-    def post(self, student_id):
+    def post(self):
         """
             Reset student password
         """
         pass
 
 
-@course_namespace.route('/student/<int:student_id>/courses')
+
+
+@student_namespace.route('/student/<int:student_id>/courses')
 class GetStudentCourses(Resource):
-    @course_namespace.marshal_with(course_model)
-    @course_namespace.doc(
+    @student_namespace.marshal_with(student_course_model)
+    @student_namespace.doc(
         description='Get all courses a student registered for', params={
             'student_id': 'The student id'
         }
@@ -89,10 +107,10 @@ class GetStudentCourses(Resource):
         
 
 
-@course_namespace.route('/student/<int:student_id>/courses')
+@student_namespace.route('/student/<int:student_id>/courses')
 class GetCourseStudent(Resource):
-    @course_namespace.marshal_with(course_model)
-    @course_namespace.doc(
+    @student_namespace.marshal_with(student_course_model)
+    @student_namespace.doc(
         description='Get students registered in a course', params={
             'course_id': 'The course id'
         }
@@ -115,11 +133,11 @@ class GetCourseStudent(Resource):
 
     
 
-@course_namespace.route('/student/<int:student_id>')
+@student_namespace.route('/student/<int:student_id>')
 class CalculateGPA(Resource):
     
-    @course_namespace.marshal_with(course_model)
-    @course_namespace.doc(
+    @student_namespace.marshal_with(student_course_model)
+    @student_namespace.doc(
         description='Retrieve a student GPA by current_student/jwt_identity', params={
             'student_id': 'The student id'
         }

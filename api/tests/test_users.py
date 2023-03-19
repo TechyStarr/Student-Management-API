@@ -51,7 +51,7 @@ class UserTestCase(unittest.TestCase):
 
         response = self.client.post('/auth/login', json=data)
 
-        assert response.status_code == 200
+        assert response.status_code == 202
 
     
 
