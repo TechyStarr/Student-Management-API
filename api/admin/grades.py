@@ -159,6 +159,8 @@ class StudentScore(Resource):
             grade = calculate_grades(score)
             grades.append(grade)
 
+        courses = []
+
         for i in range(len(scores)):
             score = float(scores[i])
 
@@ -176,14 +178,14 @@ class StudentScore(Resource):
                 grades('F')
 
             course = {
-                'course_code': student_courses[i].course_code,
-                'course_unit': student_courses[i].course_unit,
+                'course_code': student_courses.course_code[i],
+                'course_unit': student_courses.course_unit[i],
                 'score': scores[i],
                 'grade': grades[i]
             }
 
 
-        return course
+        return courses.append(course), HTTPStatus.OK
     
 
 # @grade_namespace.route('/student/<int:student_id>/scores')
