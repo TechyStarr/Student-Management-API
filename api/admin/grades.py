@@ -43,20 +43,12 @@ def calculate_grades(score):
 
 
 
-
-
 student_score_model = grade_namespace.model(
     'StudentScore', {
         'student_id': fields.String(required=True, description="'Student's Last Name"),
         'score': fields.String(required=True, description="Studend ID")
     }
 )
-
-
-# student_course_code
-
-
-
 
 
 
@@ -69,9 +61,10 @@ class GetStudentCourses(Resource):
         }
     )
     @jwt_required()
+    @is_admin
     def get(self, student_id):
         """
-            Get all courses for a student
+            Get all the courses a student registered for
         """
         student = Student.query.filter_by(id=student_id).first()
         if student is None:
@@ -80,49 +73,8 @@ class GetStudentCourses(Resource):
                 }, HTTPStatus.BAD_REQUEST
         else:
             return student.registered_courses, HTTPStatus.OK
-        
+    
 
-
-# @grade_namespace.route('/student/<int:student_id>/courses')
-# class GetCourseStudent(Resource):
-#     @grade_namespace.marshal_with(student_course_model)
-#     @grade_namespace.doc(
-#         description='Get students registered in a course', params={
-#             'course_id': 'The course id'
-#         }
-#     )
-#     @jwt_required()
-#     def get(self, course_id):
-#         """
-#             Get all scores for a student
-#         """
-#         course = Course.query.filter_by(id=course_id).first()
-#         if course is None:
-#             return {
-#             'message': 'This student does not exist'
-#                 }, HTTPStatus.BAD_REQUEST
-#         else:
-#             return course.student_courses, HTTPStatus.OK
-
-
-
-
-
-grade_points = {
-    'A': 4,
-    'B': 3,
-    'C': 2,
-    'D': 1,
-    'F': 0
-}
-
-
-def calculate_gpa(grades):
-    total_grade_points = 0
-    for grade in grades:
-        total_grade_points += grade_points[grade]
-        total_credit += grade['credits']
-    return total_grade_points / total_credit
 
 
 
@@ -132,8 +84,71 @@ def calculate_gpa(grades):
 
 
     
+# @grade_namespace.route('/student/<int:student_id>/scores')
+# class StudentScore(Resource):
+#     # @grade_namespace.marshal_with(student_score_model)
+#     @grade_namespace.doc(
+#         description='Get all scores', params={
+#             'student_id': 'The student id'
+#         }
+#     )
+#     @jwt_required()
+#     @is_admin
+#     def get(self, student_id):
+#         """
+#             Get all scores
+#         """
+        
+#         student_courses = StudentCourse.query.filter_by(student_id=student_id).all()
+#         if not student_courses:
+#             return {
+#                 'message': "This student wasn't registered for any course"
+#             }, HTTPStatus.BAD_REQUEST
+#         student_id = [student_course.student_id for student_course in student_courses]
+#         first_name = [student_course.first_name for student_course in student_courses]
+#         course_code = [student_course.course_code for student_course in student_courses]
+#         credits = [student_course.course_unit for student_course in student_courses]
+#         scores = [student_course.score for student_course in student_courses]
+#         grades = []
+#         for score in scores:
+#             grade = calculate_grades(score)
+#             grades.append(grade)
+
+#         courses = []
+
+#         for i in range(len(scores)):
+#             score = scores[i]
+
+#             if score >= 70:
+#                 grades =  'A'  
+#             elif score >= 60:
+#                 grades =  'B'  
+#             elif score >= 50:
+#                 grades =  'C'  
+#             elif score >= 45:
+#                 grades =  'D'  
+#             elif score >= 40:
+#                 grades =  'E'  
+#             else:
+#                 grades =  'F'  
+
+#             course = {
+#                 'student_id': student_id[i],
+#                 'first_name': first_name[i],
+#                 'course_code': course_code[i],
+#                 'credits': credits[i],
+#                 'score': scores[i],
+#                 'grade': grades[:1]
+#             }
+
+#             courses.append(course)
+
+
+#         return courses, HTTPStatus.OK
+    
+
 @grade_namespace.route('/student/<int:student_id>/scores')
-class StudentScore(Resource):
+class CalculateGPA(Resource):
     # @grade_namespace.marshal_with(student_score_model)
     @grade_namespace.doc(
         description='Get all scores', params={
@@ -144,7 +159,7 @@ class StudentScore(Resource):
     @is_admin
     def get(self, student_id):
         """
-            Get all scores
+            Calculate GPA
         """
         
         student_courses = StudentCourse.query.filter_by(student_id=student_id).all()
@@ -159,126 +174,63 @@ class StudentScore(Resource):
             grade = calculate_grades(score)
             grades.append(grade)
 
-        courses = []
+        total_grade_points = 0.0
+        total_credit_units = 0.0
 
-        for i in range(len(scores)):
-            score = float(scores[i])
+        for i in range(len(grades)):
+            if grades[i] == 'A':
+                total_grade_points += 5 * credits[i]
+                total_credit_units += credits[i]
+            elif grades[i] == 'B':
+                total_grade_points += 4 * float(credits[i])
+                total_credit_units += credits[i]
+            elif grades[i] == 'C':
+                total_grade_points += 3 * credits[i]
+                total_credit_units += credits[i]
+            elif grades[i] == 'D':
+                total_grade_points += 2 * credits[i]
+                total_credit_units += credits[i]
+            elif grades[i] == 'E':
+                total_grade_points += 1 * credits[i]
+                total_credit_units += credits[i]
+            elif grades[i] == 'F':
+                total_grade_points += 0 * credits[i]
+                total_credit_units += credits[i]
+        gpa = total_grade_points / total_credit_units
 
-            if score >= 70:
-                grades('A')
-            elif score >= 60:
-                grades('B')
-            elif score >= 50:
-                grades('C')
-            elif score >= 45:
-                grades('D')
-            elif score >= 40:
-                grades('E')
-            else:
-                grades('F')
-
-            course = {
-                'course_code': student_courses.course_code[i],
-                'course_unit': student_courses.course_unit[i],
-                'score': scores[i],
-                'grade': grades[i]
+        if gpa >= 4.5:
+            response = {
+                'message': 'Congratulations, You have been awarded a First Class Honours',
+                'gpa': f"Your GPA is {round(gpa, 2)}"
             }
+        elif gpa >= 3.5:
+            response = {
+                'message': 'Congratulations, You have been awarded a Second Class Upper Division',
+                'gpa': f"Your GPA is {round(gpa, 2)}"
+            }
+        elif gpa >= 2.5:
+            response = {
+                'message': 'Congratulations, You have been awarded a Second Class Lower Division',
+                'gpa': f"Your GPA is {round(gpa, 2)}"
+            }
+        elif gpa >= 1.5:
+            response = {
+                'message': 'Congratulations, You have been awarded a Third Class',
+                'gpa': f"Your GPA is {round(gpa, 2)}"
+            }
+        else:
+            response = {
+                'message': 'Sorry, You have been awarded a Pass',
+                'gpa': f"Your GPA is {round(gpa, 2)}"
+            }
+        return response, HTTPStatus.OK
 
-
-        return courses.append(course), HTTPStatus.OK
-    
-
-# @grade_namespace.route('/student/<int:student_id>/scores')
-# class CalculateGPA(Resource):
-#     # @grade_namespace.marshal_with(student_score_model)
-#     @grade_namespace.doc(
-#         description='Get all scores', params={
-#             'student_id': 'The student id'
-#         }
-#     )
-#     @jwt_required()
-#     @is_admin
-#     def get(self, student_id):
-#         """
-#             Calculate GPA
-#         """
-        
-#         student_courses = StudentCourse.query.filter_by(student_id=student_id).all()
-#         if not student_courses:
-#             return {
-#                 'message': "This student wasn't registered for any course"
-#             }, HTTPStatus.BAD_REQUEST
-#         credits = [student_course.course_unit for student_course in student_courses]
-#         scores = [student_course.score for student_course in student_courses]
-#         grades = []
-#         for score in scores:
-#             grade = calculate_grades(score)
-#             grades.append(grade)
-
-#         total_grade_points = 0.0
-#         total_credit_units = 0.0
-
-#         for i in range(len(grades)):
-#             if grades[i] == 'A':
-#                 total_grade_points += 5 * credits[i]
-#                 total_credit_units += credits[i]
-#             elif grades[i] == 'B':
-#                 total_grade_points += 4 * float(credits[i])
-#                 total_credit_units += credits[i]
-#             elif grades[i] == 'C':
-#                 total_grade_points += 3 * credits[i]
-#                 total_credit_units += credits[i]
-#             elif grades[i] == 'D':
-#                 total_grade_points += 2 * credits[i]
-#                 total_credit_units += credits[i]
-#             elif grades[i] == 'E':
-#                 total_grade_points += 1 * credits[i]
-#                 total_credit_units += credits[i]
-#             elif grades[i] == 'F':
-#                 total_grade_points += 0 * credits[i]
-#                 total_credit_units += credits[i]
-#         gpa = total_grade_points / total_credit_units
-#         return {
-#             'message': 'GPA calculated successfully',
-#             'scores': scores,
-#             'grades': grades,
-#             'credits': credits,
-#             'gpa': round(gpa, 2)
-#         }
-
- 
-        
-
-
-
-        
 
 
 
 
 @grade_namespace.route('/student/courses/<int:course_id>')
 class GetCourseStudent(Resource):
-    @grade_namespace.marshal_with(student_course_model)
-    @grade_namespace.doc(
-        description='Get students registered in a course', params={
-            'course_id': 'The course id'
-        }
-    )
-    @jwt_required()
-    def get(self, course_id):
-        """
-            Get all scores fo
-        """
-        scores = []
-        course = StudentCourse.query.filter_by(id=course_id).first()
-        if course is None:
-            return {
-            'message': 'This student does not exist'
-                }, HTTPStatus.BAD_REQUEST
-        else:
-            return course, HTTPStatus.OK
-        
-
     @grade_namespace.expect(student_course_model)
     @grade_namespace.doc(
         description='Update student details in a course', params={ 
@@ -298,7 +250,6 @@ class GetCourseStudent(Resource):
                 }, HTTPStatus.BAD_REQUEST
         
         #Update student details
-
         data = grade_namespace.payload
         student.course_code = data['course_code']
         student.course_unit = data['course_unit']
@@ -328,55 +279,3 @@ class GetCourseStudent(Resource):
 
 
 
-# @grade_namespace.route('/student/<int:student_id>/scores')
-# class StudentScore(Resource):
-#     # @grade_namespace.marshal_with(student_score_model)
-#     @grade_namespace.doc(
-#         description='Get all scores', params={
-#             'student_id': 'The student id'
-#         }
-#     )
-#     @jwt_required()
-#     @is_admin
-#     def get(self, student_id):
-#         """
-#             Get all scores
-#         """
-        
-#         student_courses = StudentCourse.query.filter_by(student_id=student_id).all()
-#         if not student_courses:
-#             return {
-#                 'message': "This student wasn't registered for any course"
-#             }, HTTPStatus.BAD_REQUEST
-#         credits = [student_course.course_unit for student_course in student_courses]
-#         scores = [student_course.score for student_course in student_courses]
-#         grades = []
-#         for score in scores:
-#             grade = calculate_grades(score)
-#             grades.append(grade)
-
-#         for i in range(len(scores)):
-#             score = float(scores[i])
-
-#             if score >= 70:
-#                 grades.append('A')
-#             elif score >= 60:
-#                 grades.append('B')
-#             elif score >= 50:
-#                 grades.append('C')
-#             elif score >= 45:
-#                 grades.append('D')
-#             elif score >= 40:
-#                 grades.append('E')
-#             else:
-#                 grades.append('F')
-
-#             course = {
-#                 'course_code': student_courses[i].course_code,
-#                 'course_unit': student_courses[i].course_unit,
-#                 'score': scores[i],
-#                 'grade': grades[i]
-#             }
-
-
-#         return course

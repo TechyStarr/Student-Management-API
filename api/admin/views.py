@@ -331,7 +331,7 @@ class GetStudentsForCourse(Resource):
             return {
                 'message': 'No student has been registered for this course'
             }
-        return {
+        return students, {
             'message': 'Course does not exist'
         }
 
