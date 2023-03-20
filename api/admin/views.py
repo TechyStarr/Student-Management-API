@@ -67,7 +67,7 @@ show_course_model = admin_namespace.model(
         'id': fields.String(required=True),
         'course_title': fields.String(required=True, description="Course Name"),
         'course_code': fields.String(required=True, description="'Course Code"),
-        'course_unit': fields.String(required=True, description="Course Unit"),
+        'course_unit': fields.Float(required=True, description="Course Unit"),
         'score': fields.Float(required=True, default=0.0),
         'tutor_name': fields.String(required=True, description="Course Level")
     }
@@ -105,15 +105,13 @@ student_course_model = admin_namespace.model(
     'StudentCourse', {
 		'id': fields.String(required=True),
         'course_code': fields.String(description="'Course Code"),
-        'course_unit': fields.String( description="Course Name"),
+        'course_unit': fields.Float( description="Course Name"),
         'score': fields.Float(required=True, default=0.0),
         'grade': fields.String(required=True, default='N/A'),
         'first_name': fields.String(required=True, description="Student's First Name"),
         'last_name': fields.String(required=True, description="'Student's Last Name"),
         'student_id': fields.String(required=True, description="Studend ID"),
-        'course_id': fields.String(required=True, description="Course ID"),
-
-
+        'course_id': fields.String(required=True, description="Course ID")
 	}
 )
 

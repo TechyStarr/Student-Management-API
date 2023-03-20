@@ -51,15 +51,17 @@ class StudentCourse(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
     course_code = db.Column(db.String(20), nullable=False, unique=True)
-    course_unit = db.Column(db.Integer(), nullable=False)
-    score = db.Column(db.Float(10), default=0.0)
-    grade = db.Column(db.String(10), default='N/A')
+    course_unit = db.Column(db.Float(10), nullable=False)
+    score = db.Column(db.Float(2), default=0.0)
+    grade = db.Column(db.String(2), default='N/A')
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('student_courses.id'))
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
     registered_courses = db.relationship('StudentCourse', lazy=True)
 
+
+    
 
     
     def __repr__(self):
@@ -138,6 +140,8 @@ def calculate_grades(score):
         return 'D'
     else:
         return 'F'
+    
+
 
 def calculate_grade_points(grade, credits):
     if grade == "A":
@@ -152,10 +156,20 @@ def calculate_grade_points(grade, credits):
         return 0.0 * credits
     
 
+
+
+
+
 def total_grade_points(score, credits):
     grade = calculate_grades(score)
     grade_points = calculate_grade_points(grade, credits)
     return grade_points * credits
+
+def calculate_gpa(score, credits):
+    total_grade_points = total_grade_points(score, credits)
+    gpa = total_grade_points / credits
+    return gpa
+
         
 
     
