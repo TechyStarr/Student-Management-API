@@ -61,7 +61,7 @@ class StudentCourse(db.Model):
 
     
     def __repr__(self):
-        return f"<Course {self.course_id}>"
+        return f"<Course {self.course_code}>"
     
     def save(self):
         db.session.add(self)

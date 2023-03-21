@@ -255,11 +255,13 @@ class GetCourses(Resource):
         courses = Course.query.all()
         
         if not courses:        
-                    return {
-                        'message': 'This course does not exist'
-                    }, HTTPStatus.BAD_REQUEST
-        
-        return courses, HTTPStatus.OK
+                    abort(404, message="No course has been registered")
+        try:
+            return courses, HTTPStatus.OK
+        except Exception as e:
+            return {
+                'message': 'An error occured while retrieving courses'
+            }, HTTPStatus.BAD_REQUEST
     
 
     @admin_namespace.expect(create_course_model)
@@ -271,7 +273,7 @@ class GetCourses(Resource):
     @is_admin
     def post(Self):
         """
-            Create a new course
+            Create a new course, course_code and course_title must be unique
         """
 
         data = admin_namespace.payload
@@ -288,12 +290,18 @@ class GetCourses(Resource):
             course_unit = data['course_unit'],
             tutor_name = data['tutor_name']
         )
+        try:
+            new_course.save()
 
-        new_course.save()
+            return new_course, HTTPStatus.CREATED, {
+                'message': 'Course created successfully'
+            }
 
-        return new_course, HTTPStatus.CREATED, {
-            'message': 'Course created successfully'
-        }
+        except Exception as e:
+            return {
+                'message': 'Something went wrong'
+            }
+
     
 
 
@@ -319,9 +327,9 @@ class GetStudentCourses(Resource):
             abort(404, message="Student does not exist")
 
         student_course = StudentCourse.query.filter_by(student_id=student_id).all()
-        if student_course is None:
+        if not student_course and student:
             abort(404, message="This student has not registered for any course")
-            
+
         try:
             return student.registered_courses, HTTPStatus.OK
         except Exception as e:
@@ -356,7 +364,12 @@ class GetCourse(Resource):
         course = Course.get_by_id(course_id)
         
         if course:
-            return course, HTTPStatus.OK   
+            try:
+                return course, HTTPStatus.OK
+            except Exception as e:
+                return {
+                    'message': 'An error occured while retrieving course'
+                }, HTTPStatus.BAD_REQUEST   
         
         abort(404, message="This course does not exist")
 
@@ -453,7 +466,7 @@ class RegisterStudentCourse(Resource):
 
         course_code = admin_namespace.payload['course_code']
         course_code = StudentCourse.query.filter_by(course_code=course_code).first()
-        if course_code:
+        if course_code and student.student_id:
             abort(409, message="This student has already registered for this course")
         
         data = admin_namespace.payload

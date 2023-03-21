@@ -43,11 +43,17 @@ def create_app(config=config_dict['dev']):
 
     api = Api(app,
             title='Student Management API',
-            description='A student management API for managing student records with provided access to admin and students',
+            description='A student management API for managing student records with provided access to admin and students.\n'
+            'The API is built with Python, Flask and Flask-RESTX and is still under development.\n'
+            'Follow the steps below to use the API:\n'
+            '1. Create a user account\n'
+            '2. Login to generate a JWT token\n'
+            '3. Add the token to the Authorization header with the Bearer prefix eg "Bearer JWT-token"\n'
+            '4. Use the token to access the endpoints',
+
             authorizations=authorizations,
             security="Bearer Auth"
             )
-            
 
 
     @api.errorhandler(NotFound)
