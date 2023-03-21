@@ -61,13 +61,14 @@ class Student(db.Model):
     # enrollment_status = db.Column(db.Enum(EnrollmentStatus), default=EnrollmentStatus.WAIT_LISTED)
     student_id = db.Column(db.String(20), unique=True)
     gpa = db.Column(db.Float, default=0.0)
-    registered_courses = db.relationship('StudentCourse', lazy=True, backref='student_courses')
+    registered_courses = db.relationship('StudentCourse', lazy=True, backref='StudentCourse.id')
+
+    # Add ForeignKey constraint
+    # registered_courses_fk = db.Column(db.Integer(), db.ForeignKey('student_courses.id'))
 
 
     def __repr__(self):
         return f"<Student {self.username}>"
-    
-
     
     
     def save(self):

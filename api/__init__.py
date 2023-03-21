@@ -6,14 +6,14 @@ from .students.views import student_namespace
 from .admin.grades import grade_namespace
 from .config.config import config_dict
 from .utils import db
+from .utils.blocklist import BLOCKLIST
 from .models.courses import Course
 from .models.user import User, Student
 from .models.courses import Course, StudentCourse
 from flask_migrate import Migrate
-# from flask_script import Manager
 from flask_jwt_extended import JWTManager
 from werkzeug.exceptions import NotFound, MethodNotAllowed
-from redis import Redis
+
 
 
 
@@ -27,19 +27,8 @@ def create_app(config=config_dict['dev']):
     jwt = JWTManager(app)
 
 
-    redis_blocklist = Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
-    # @jwt.token_in_blocklist_loader
-    # def check_if_token_revoked(jwt_header, jwt_payload):
-    #     jti = jwt_payload['jti']
-    #     token_in_blocklist = redis_blocklist.get(jti)
-    #     return token_in_blocklist is not None
-
-
     migrate = Migrate(app, db)
-    # manager = Manager(app)
 
-    # manager.add_command('db')
 
     authorizations = {
         'Bearer Auth': {
@@ -58,6 +47,9 @@ def create_app(config=config_dict['dev']):
             authorizations=authorizations,
             security="Bearer Auth"
             )
+            
+
+
             
 
 

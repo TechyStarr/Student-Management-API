@@ -2,14 +2,15 @@ import uuid
 import random
 import string
 from ..utils import db
+from ..utils.blocklist import BLOCKLIST
 from flask import request
 from flask_restx import Resource, fields, Namespace
 from ..models.user import User
 from ..models.user import Student
 from werkzeug.security import generate_password_hash, check_password_hash
 from http import HTTPStatus
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, unset_jwt_cookies
-from redis import Redis
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended.exceptions import NoAuthorizationError
 
 
 
@@ -37,8 +38,6 @@ login_model = auth_namespace.model(
 
 
 
-redis_blocklist = Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
 
 
 def generate_random_string(self):
@@ -46,7 +45,7 @@ def generate_random_string(self):
 		Generate random string of specified length
 	"""
 
-	characters = string.ascii_letters + string.digits
+	characters =  string.digits
 	random_string = ''.join(random.choice(characters) for i in range(3))
 
 	return random_string
@@ -98,12 +97,16 @@ class SignUp(Resource):
 			password_hash = generate_password_hash(data.get('password_hash')),
 			is_admin = True
 		)
-
-		new_user.save()
-		return new_user, HTTPStatus.CREATED, {
-			'message': f'User {new_user.username} created successfully'
-		}
-	
+		try:
+			new_user.save()
+			return new_user, HTTPStatus.CREATED, {
+				'message': f'User {new_user.username} created successfully'
+			}
+		except Exception as e:
+			db.session.rollback()
+			return {
+				'message': 'Something went wrong'
+			}, HTTPStatus.INTERNAL_SERVER_ERROR
 
 
 
@@ -150,7 +153,7 @@ class StudentLogin(Resource):
 
 			else:
 				response = {
-					'message': 'Invalid Credentials'
+					'message': 'Invalid email or password'
 				}
 
 				return response, HTTPStatus.ACCEPTED
@@ -183,9 +186,46 @@ class Logout(Resource):
 		"""
 			Log the user out
 		"""
-		
-		jti = get_jwt_identity()
-		redis_blocklist.set(jti, '', ex=300)
-		unset_jwt_cookies()
+		token = get_jwt()
+		jti = token['jti']
+		token_type = token['type']
+		BLOCKLIST.add(jti)
 
-		return {"message": "Successfully Logged Out"}, HTTPStatus.OK
+		response = {
+			'message': 'Successfully Logged Out, Token revoked'
+		}
+		try:
+			return response, HTTPStatus.OK
+		except Exception as e:
+			return {
+				'message': 'Something went wrong'
+			}, HTTPStatus.INTERNAL_SERVER_ERROR
+		
+
+# @auth_namespace.route('/reset-password')
+# class ResetPassword(Resource):
+# 	@jwt_required
+# 	def post(self):
+# 		"""
+# 			Reset password
+# 		"""
+# 		data = request.get_json()
+
+
+# 		email = data.get('email')
+# 		password = data.get('password')
+# 		confirm_password = data.get('confirm_password')
+
+# 		user = User.query.filter_by(email=email).first()
+
+# 		if user:
+# 			user.password_hash = generate_password_hash(password)
+# 			user.save()
+# 			return {
+# 				'message': 'Password reset successful'
+# 			}, HTTPStatus.OK
+
+# 		else:
+# 			return {
+# 				'message': 'User does not exist'
+# 			}, HTTPStatus.NOT_FOUND

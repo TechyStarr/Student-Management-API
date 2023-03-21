@@ -13,7 +13,7 @@ class Course(db.Model):
     __tablename__ = 'courses'
 
     id = db.Column(db.Integer(), primary_key=True)
-    course_title = db.Column(db.String(80), nullable=False, unique=True)
+    course_title = db.Column(db.String(80), nullable=False)
     course_code = db.Column(db.String(20), nullable=False, unique=True)
     course_unit = db.Column(db.Integer(), nullable=False)
     tutor_name = db.Column(db.String(80), nullable=False)
@@ -54,11 +54,7 @@ class StudentCourse(db.Model):
     course_unit = db.Column(db.Float(10), nullable=False)
     score = db.Column(db.Float(2), default=0.0)
     grade = db.Column(db.String(2), default='N/A')
-    first_name = db.Column(db.String(80), nullable=False)
-    last_name = db.Column(db.String(80), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('student_courses.id'))
-    student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
-    registered_courses = db.relationship('StudentCourse', lazy=True)
+    student_id = db.Column(db.Integer(), db.ForeignKey('students.id'))
 
 
     
@@ -84,49 +80,6 @@ class StudentCourse(db.Model):
     
 
 
-
-# Handles grades for each course
-# class Score(db.Model):
-#     __tablename__ = 'scores'
-
-#     id = db.Column(db.Integer(), primary_key=True)
-#     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), primary_key=True)
-#     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), primary_key=True)
-#     score = db.Column(db.Float(10), nullable=True)
-#     # grade = db.Column(db.String(10), nullable=True)
-#     # date_created = db.Column(db.Datetime(), default=datetime.utcnow)
-
-
-    # @classmethod
-    # def __init__(self, student_id, course_id, score):
-    #     self.student_id = student_id
-    #     self.course_id = course_id
-    #     self.score = score
-    
-    # def save(self):
-    #     db.session.add(self)
-    #     db.session.commit()
-
-    # def update(self):
-    #     db.session.commit()
-
-    # def delete(self):
-    #     db.session.delete(self)
-    #     db.session.commit()
-
-    # @classmethod
-    # def get_by_id(cls, id):
-    #     return cls.query.get_or_404(id)
-    
-
-
-    # def grades(self): {
-    #     'A': '90-100',
-    #     'B': '80-89',
-    #     'C': '70-79',
-    #     'D': '60-69',
-    #     'F': '0-59'
-    # }
 
 
 def calculate_grades(score):
@@ -170,9 +123,4 @@ def calculate_gpa(score, credits):
     gpa = total_grade_points / credits
     return gpa
 
-        
-
-    
-    
-    
 

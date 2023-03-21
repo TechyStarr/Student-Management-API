@@ -5,7 +5,7 @@ from flask_restx import Resource, fields, Namespace
 from ..admin.views import student_model, create_course_model, student_course_model
 from ..auth.views import generate_random_string, generate_password
 from ..models.user import Student, User
-from ..models.courses import Course, StudentCourse, calculate_grade_points, calculate_gpa, calculate_grades
+from ..models.courses import Course, StudentCourse, calculate_grades
 from ..auth.views import generate_random_string, generate_password, login_model
 from werkzeug.security import generate_password_hash, check_password_hash
 from http import HTTPStatus
@@ -232,6 +232,7 @@ class CalculateGPA(Resource):
 @grade_namespace.route('/student/courses/<int:course_id>')
 class GetCourseStudent(Resource):
     @grade_namespace.expect(student_course_model)
+    @grade_namespace.marshal_with(student_course_model)
     @grade_namespace.doc(
         description='Update student details in a course', params={ 
             'course_id': 'The course id'
@@ -245,9 +246,7 @@ class GetCourseStudent(Resource):
         """
         student = StudentCourse.query.filter_by(id=course_id).first()
         if student is None:
-            return {
-            'message': 'This student does not exist'
-                }, HTTPStatus.BAD_REQUEST
+            abort(404, message="Student not found")
         
         #Update student details
         data = grade_namespace.payload
@@ -255,19 +254,19 @@ class GetCourseStudent(Resource):
         student.course_unit = data['course_unit']
         student.score = data['score']
         student.grade = data['grade']
-        student.first_name = data['first_name']
-        student.last_name = data['last_name']
 
         student.save()
-
+        
         try:
-            return student, {
-                'message': 'Successfully updated'
-            }, HTTPStatus.OK
-        except:
+            return student, HTTPStatus.OK, {
+                'message': 'Student details updated successfully'
+            }
+        
+        except Exception as e:
             return {
-                'message': 'Something went wrong'
+                'message': str(e)
             }, HTTPStatus.INTERNAL_SERVER_ERROR
+    
 
 
 
