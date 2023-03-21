@@ -17,7 +17,7 @@ from werkzeug.exceptions import NotFound, MethodNotAllowed
 
 
 
-def create_app(config=config_dict['prod']):
+def create_app(config=config_dict['dev']):
     app = Flask(__name__)
 
     app.config.from_object(config)
@@ -50,7 +50,14 @@ def create_app(config=config_dict['prod']):
             
 
 
-            
+    @api.errorhandler(NotFound)
+    def not_found(error):
+        return {"error": "Not Found"}, 404
+
+    @api.errorhandler(MethodNotAllowed)
+    def method_not_allowed(error):
+        return {"error": "Method Not Allowed"}, 404
+
 
 
     api.add_namespace(auth_namespace)
