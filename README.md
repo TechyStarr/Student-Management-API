@@ -1,5 +1,9 @@
 # Student-Management-API
 
+Just like a normal school portal, Student-hub was built to manage student records. It creates room for an admin(school) to register students and courses, upload students' grades, calculate student GPA with the provided data amongst so many other CRUD operations. Our students are not left out as they can update their profile, retrieve their courses and perform other operations on the site.
+
+I built this Student Management API with Python's Flask-RESTx and deployed on PythonAnywhere as the final exam project for Altshool Africa's Backend Engineering track.
+
 Note: More functionalities will be implemented with time as it is still under development
 
 ## Table of Contents
@@ -7,6 +11,7 @@ Note: More functionalities will be implemented with time as it is still under de
 - [Student Management Student](#student-management-student)
   - [Table of Contents](#table-of-contents)
   - [Live ( deployed version )](#live--deployed-version-)
+  - [Usage ( deployed version )](#usage--deployed-version-)
   - [Testing Locally](#testing-locally)
   - [Available Endpoint](#available-endpoint)
     - [Auth Endpoint](#auth-endpoint)
@@ -14,9 +19,36 @@ Note: More functionalities will be implemented with time as it is still under de
     - [Students Endpoint](#students-endpoint)
     - [Grades Endpoint](#grades-endpoint)
 
-## Live ( deployed version ) 
+## Live ( deployed version )
 
-Visit [website](https://techystarr.pythonanywhere.com/)
+### Usage
+1. Visit [website](https://techystarr.pythonanywhere.com/) on your web browser
+
+
+2. Create an account as an admin
+    - Click "Auth" to reveal the authentication endpoints
+    - Register with your preferred details
+
+
+3. Sign into your account
+    - Input the details you registered with to generate a JWT token
+    - Copy this access token without the quotation marks
+
+
+4. Click on the "Authorize" button at the top right. Enter the JWT token prefixed with "Bearer" in the given format
+    ```
+    Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlIj
+    ```
+    
+5. Click "Authorize", then close the pop-up
+
+
+6. Now authorized, you can use the endpoints by creating, viewing, updating and deleting both students and courses.
+
+
+7. Click the 'Authorize' button, then logout to logout
+
+
 ## Testing Locally
 
 Clone the repository
@@ -51,7 +83,13 @@ flask db upgrade
 Run application
 
 ```console
-flask run or py runserver.py
+flask run
+```
+
+or
+
+```console
+py runserver.py
 ```
 
 
