@@ -15,7 +15,7 @@ Note: More functionalities will be implemented with time as it is still under de
 
 ## Live ( deployed version ) 
 
-Visit [website](http://olakaycoder1.pythonanywhere.com/)
+Visit [website](https://techystarr.pythonanywhere.com/)
 ## Testing Locally
 
 Clone the repository
@@ -50,7 +50,7 @@ flask db upgrade
 Run application
 
 ```console
-flask run
+flask run or py runserver.py
 ```
 
 
@@ -62,35 +62,46 @@ flask run
 ### Auth Endpoint
 | ROUTE | METHOD | DESCRIPTION | AUTHORIZATION  | USER TYPE |  PLACEHOLDER | 
 | ------- | ----- | ------------ | ------|------- | ----- |
-|  `auth/register` | _POST_ | It allows an admin to create an account  | Any | Any |  ---- | 
-|  `auth/token` |  _POST_  | Generates an access and refresh token for user authentication | Any | Any | ---- | 
-|  `auth/token/refresh` |  _POST_  | It is used to refresh expired tokens   | Authenticated | Any | ---- | 
+|  `auth/signup` | _POST_ | It allows an admin to create an account  | Any | Any |  ---- | 
+|  `auth/login` |  _POST_  | Generates an access and refresh token for user authentication | Any | Any | ---- | 
+|  `auth/refresh` |  _POST_  | It is used to refresh expired tokens   | Authenticated | Any | ---- | 
+
+
+
+
+### Admin Endpoint
+| ROUTE | METHOD | DESCRIPTION | AUTHORIZATION  | USER TYPE |  PLACEHOLDER | 
+| ------- | ----- | ------------ | ------|------- | ----- |
+|  `admin/students` |  _GET_  | It allows the admin retrieve all registered students   | Authenticated | Admin | ---- |
+|  `admin/students` |  _POST_  | It allows the admin register students   | Authenticated | Admin | ---- |
+|  `admin/students/<student_id>` |  _GET_  | It allows the admin retrieve a student by id | Authenticated | Any | A student ID |
+|  `admin/student/<student_id>` |  _DELETE_  | It allows the admin delete a student by id | Authenticated | Admin | A student ID |
+|  `admin/courses` |  _POST_  | It allows the admin create courses   | Authenticated | Admin | ---- |
+|  `admin/courses` |  _GET_  | It allows the admin retrieve registered courses   | Authenticated | Admin | ---- |
+|  `admin/course/<course_id>` |  _DELETE_  | It allows the admin delete a course by id | Authenticated | Any | A course ID |
+|  `admin/course/<course_id>` |  _PATCH_  | It allows the admin update a course by id | Authenticated | Any | A course ID |
+|  `admin/students/<student_id>` |  _POST_  | It allows the admin register a student for a course  | Authenticated | Any | A student ID |
+|  `admin/students/<student_id>/courses` |  _GET_  | The admin retrieves all courses a student is registered for   | Authenticated | ---- | A student ID |
+
+
 
 
 
 ### Students Endpoint
 | ROUTE | METHOD | DESCRIPTION | AUTHORIZATION  | USER TYPE |  PLACEHOLDER | 
 | ------- | ----- | ------------ | ------|------- | ----- |
-|  `students` |  _GET_  | It allows the retrieval all student is the school   | Authenticated | Admin | ---- |
-|  `students/<student_id>` |  _GET_  | It allows the  retrieval of a student | Authenticated | Any | A student ID |
-|  `students/<student_id>/courses/grade` |  _GET_  | It allows the retrieval a student all courses grade   | Authenticated | Any | A student ID |
-|  `students/<student_id>/courses` |  _GET_  | It allows the retrieval of a student courses   | Authenticated | ---- | A student ID |
-|  `students/<student_id>/gpa` |  _GET_  | Calculate a student gpa score   | Authenticated | Any | A student ID |
-|  `students/courses/add_and_drop` |  _POST_  | It allows student register a course   | Authenticated | Student | ---- |
-|  `students/courses/add_and_drop` |  _DELETE_  | It allows student unregister a course   | Authenticated | Student | ---- |
-|  `students/course/add_score` |  _PUT_  | It allow teacher add a student score in a course | Authenticated | Teacher | ---- |
+|  `student/courses/<student_id>/scores` |  _GET_  | It allows the student retrieve their score and course details   | Authenticated | Student | A student ID |
+|  `students/<student_id>/gpa` |  _GET_  | Calculate a student gpa score   | Authenticated | Student | A student ID |
+|  `students/course/add_score` |  _PATCH_  | It allows student update profile | Authenticated | Student | ---- |
 
 
-### Courses Endpoint
+
+### Grades Endpoint
 | ROUTE | METHOD | DESCRIPTION | AUTHORIZATION  | USER TYPE |  PLACEHOLDER | 
 | ------- | ----- | ------------ | ------|------- | ----- |
-|  `courses` |  _GET_  | It allows the retrieval of all available courses   | Authenticated | Any | ---- |
-|  `courses` |  _POST_  | It allows the creation of a new course   | Authenticated | Admin | ---- |
-|  `courses` |  _DELETE_  | It allows deleting a course   | Authenticated | Admin | ---- |
-|  `courses/<course_id>` |  _GET_  | It allows the retrieval all student is the school   | Authenticated | Admin | A course ID |
-|  `courses/<course_id>/students` |  _GET_  | It allows the  retrieval of all students in a courses | Authenticated | Any | A course ID |
-|  `courses/<course_id>/students/add_and_drop` |  _POST_  | It allows teacher add a  student the their course | Authenticated | Teacher | A course ID |
-|  `courses/<course_id>/students/add_and_drop` |  _DELETE_  | It allows teacher remove a  student from their course | Authenticated | Teacher | A course ID |
-|  `courses/grade` |  _GET_  | It allows student retrieve all registered courses grade | Authenticated | Student | ---- |
+|  `grades/student/courses/course_id` |  _PATCH_  | It allows the admin update student course details   | Authenticated | Admin | ---- |
+|  `grades/student/student_id/courses` |  _GET_  | It allows the admin retrieve all courses a student registered for   | Authenticated | Admin | ---- |
+|  `grades/student/student_id/courses` |  _GET_  | It allows the admin retrieve all courses a student is registered for   | Authenticated | Admin | ---- |
+
 
 
