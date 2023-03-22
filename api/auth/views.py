@@ -4,7 +4,7 @@ import string
 from ..utils import db
 from ..utils.blocklist import BLOCKLIST
 from flask import request
-from flask_restx import Resource, fields, Namespace
+from flask_restx import Resource, fields, Namespace, abort
 from ..models.user import User
 from ..models.user import Student
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -82,9 +82,7 @@ class SignUp(Resource):
 		# check if user already exists
 		user = User.query.filter_by(email=data.get('email')).first()
 		if user:
-			return {
-				'message': 'User already exists'
-			}, HTTPStatus.CONFLICT
+			abort(409, message=f'User {user.username} already exists')
 		
 		# email = email
 		# student_id = student_id
@@ -149,14 +147,9 @@ class StudentLogin(Resource):
 					'access_token': access_token,
 					'refresh_token': refresh_token
 				}
-				return response, HTTPStatus.ACCEPTED
+				abort(200, message=response)
 
-			else:
-				response = {
-					'message': 'Invalid email or password'
-				}
-
-				return response, HTTPStatus.ACCEPTED
+			abort(401, message='Invalid Credentials')
 
 
 
