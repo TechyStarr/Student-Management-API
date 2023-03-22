@@ -10,8 +10,9 @@ Note: More functionalities will be implemented with time as it is still under de
   - [Testing Locally](#testing-locally)
   - [Available Endpoint](#available-endpoint)
     - [Auth Endpoint](#auth-endpoint)
+    - [Admin Endpoint](#admin-endpoint)
     - [Students Endpoint](#students-endpoint)
-    - [Courses Endpoint](#courses-endpoint)
+    - [Grades Endpoint](#grades-endpoint)
 
 ## Live ( deployed version ) 
 
