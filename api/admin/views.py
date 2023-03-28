@@ -67,7 +67,6 @@ show_course_model = admin_namespace.model(
         'course_title': fields.String(required=True, description="Course Name"),
         'course_code': fields.String(required=True, description="'Course Code"),
         'course_unit': fields.String(required=True, description="Course Unit"),
-        'score': fields.Float(required=True, default=0.0),
         'tutor_name': fields.String(required=True, description="Course Level")
     }
 )
@@ -97,14 +96,13 @@ simple_student_model = admin_namespace.model(
 
 student_course_model = admin_namespace.model(
     'StudentCourse', {
-		'id': fields.String(required=True),
         'course_code': fields.String(description="'Course Code"),
         'course_unit': fields.Float( description="Course Name"),
         'score': fields.Float(required=True, default=0.0),
-        'grade': fields.String(required=True, default='N/A'),
-        'student_id': fields.String(required=True, description="Studend ID"),
-	}
+        'grade': fields.String(required=True, default='N/A')
+    }
 )
+
 
 
 
@@ -273,7 +271,7 @@ class GetCourses(Resource):
     @is_admin
     def post(Self):
         """
-            Create a new course, course_code and course_title must be unique
+            Create a new course. Course_code and course_title must be unique
         """
 
         data = admin_namespace.payload
@@ -466,8 +464,15 @@ class RegisterStudentCourse(Resource):
 
         course_code = admin_namespace.payload['course_code']
         course_code = StudentCourse.query.filter_by(course_code=course_code).first()
-        if course_code and student.student_id:
-            abort(409, message="This student has already registered for this course")
+        course_unit = admin_namespace.payload['course_unit']
+        if course_unit == 0:
+            abort(400, message="Course unit cannot be zero")
+        score = admin_namespace.payload['score']
+        if score < 0 or score > 100:
+            abort(400, message="Score must be between 0 and 100")
+        if student:
+            if course_code:
+                abort(409, message="This student has already registered for this course")
         
         data = admin_namespace.payload
         new_course = StudentCourse(

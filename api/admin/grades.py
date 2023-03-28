@@ -196,6 +196,10 @@ class CalculateGPA(Resource):
             elif grades[i] == 'F':
                 total_grade_points += 0 * credits[i]
                 total_credit_units += credits[i]
+            else:
+                return {
+                    'message': 'Something went wrong'
+                }, HTTPStatus.BAD_REQUEST
         gpa = total_grade_points / total_credit_units
 
         if gpa >= 4.5:

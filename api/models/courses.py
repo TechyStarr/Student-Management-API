@@ -50,7 +50,7 @@ class StudentCourse(db.Model):
     __tablename__ = 'student_courses'
 
     id = db.Column(db.Integer(), primary_key=True)
-    course_code = db.Column(db.String(20), nullable=False, unique=True)
+    course_code = db.Column(db.String(20), nullable=False)
     course_unit = db.Column(db.Float(10), nullable=False)
     score = db.Column(db.Float(2), default=0.0)
     grade = db.Column(db.String(2), default='N/A')
