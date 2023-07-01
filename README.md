@@ -30,7 +30,7 @@ Note: More functionalities will be implemented with time as it is still under de
     - Register with your preferred details
 
 
-3. Sign into your account
+3. Sign in to your account
     - Input the details you registered with to generate a JWT token
     - Copy this access token without the quotation marks
 
