@@ -1,10 +1,8 @@
 # Student-Management-API
 
-Just like a normal school portal, Student-hub was built to manage student records. It creates room for an admin(school) to register students and courses, upload students' grades, calculate student GPA with the provided data amongst so many other CRUD operations. Our students are not left out as they can update their profile, retrieve their courses and perform other operations on the site.
+Like a normal school portal, Student-hub was built to manage student records. It creates room for an admin(school) to register students and courses, upload students' grades, and calculate student GPA with the provided data amongst so many other CRUD operations. Our students are not left out as they can update their profiles, retrieve their courses and perform other operations on the site.
 
-I built this Student Management API with Python's Flask-RESTx and deployed on PythonAnywhere as the final exam project for Altshool Africa's Backend Engineering track.
-
-Note: More functionalities will be implemented with time as it is still under development
+I built this Student Management API with Python's Flask-RESTx and deployed it on PythonAnywhere as the final exam project for Altshool Africa's Backend Engineering track.
 
 ## Table of Contents
 
@@ -60,18 +58,18 @@ git clone https://github.com/TechyStarr/Student-Management-API.git
 
 
 
-Change directory to the cloned folder
+Change the directory to the cloned folder
 
 ```console
 cd student-mgt
 ```
 
-Install necessary dependency to run the project
+Install the necessary dependency to run the project
 
 ```console
 pip install -r requirements.txt
 ```
-Create database from migration files 
+Create a database from migration files 
 
 ```console
 flask db migrate -m "your description"
